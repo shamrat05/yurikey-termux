@@ -97,17 +97,22 @@ root_apply() {
   chown root:root "$KEYBOX_FILE"
   chmod 0644 "$KEYBOX_FILE"
 
-  : > "$TARGET_FILE"
+  temp_target="$TARGET_FILE.tmp.$$"
+  : > "$temp_target"
   count=0
   for package in $ALLOWLIST; do
-    if pm path "$package" >/dev/null 2>&1; then
-      printf '%s\n' "$package" >> "$TARGET_FILE"
+    if /system/bin/cmd package path "$package" >/dev/null 2>&1 || /system/bin/pm path "$package" >/dev/null 2>&1; then
+      printf '%s\n' "$package" >> "$temp_target"
       count=$((count + 1))
     fi
   done
+  if [ "$count" -eq 0 ]; then
+    rm -f "$temp_target"
+    die "no allowlisted packages detected; target.txt unchanged"
+  fi
+  mv "$temp_target" "$TARGET_FILE"
   chown root:root "$TARGET_FILE"
   chmod 0644 "$TARGET_FILE"
-  [ "$count" -gt 0 ] || die "no allowlisted packages installed; target.txt left empty"
 
   for package in com.google.android.gms com.google.android.gsf com.android.vending; do
     am force-stop "$package" >/dev/null 2>&1 || true
