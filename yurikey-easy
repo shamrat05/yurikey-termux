@@ -34,9 +34,18 @@ say() { printf '%s\n' "$*"; }
 pick_keybox() {
   if command -v termux-storage-get >/dev/null 2>&1; then
     picked_temp=$(mktemp "$PREFIX_DIR/tmp/yurikey-keybox.XXXXXX")
-    if termux-storage-get "$picked_temp" && [ -s "$picked_temp" ]; then
-      printf '%s\n' "$picked_temp"
-    else
+    termux-storage-get "$picked_temp" >/dev/null 2>&1 || true
+    say "Waiting for file selection..." >&2
+    seconds=0
+    while [ "$seconds" -lt 300 ]; do
+      if [ -s "$picked_temp" ]; then
+        printf '%s\n' "$picked_temp"
+        return 0
+      fi
+      sleep 1
+      seconds=$((seconds + 1))
+    done
+    if [ ! -s "$picked_temp" ]; then
       rm -f "$picked_temp"
     fi
   else
