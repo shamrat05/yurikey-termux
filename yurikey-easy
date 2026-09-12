@@ -32,10 +32,15 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 say() { printf '%s\n' "$*"; }
 
 pick_keybox() {
-  if command -v termux-file-picker >/dev/null 2>&1; then
-    termux-file-picker --type 'text/xml' 2>/dev/null || true
+  if command -v termux-storage-get >/dev/null 2>&1; then
+    picked_temp=$(mktemp "$PREFIX_DIR/tmp/yurikey-keybox.XXXXXX")
+    if termux-storage-get "$picked_temp"; then
+      printf '%s\n' "$picked_temp"
+    else
+      rm -f "$picked_temp"
+    fi
   else
-    say "termux-file-picker unavailable. Install Termux:API app + package: pkg install termux-api" >&2
+    say "termux-storage-get unavailable. Install matching Termux:API app + package: pkg install termux-api" >&2
     printf 'Keybox XML path: '
     read -r path
     printf '%s\n' "$path"
@@ -147,6 +152,7 @@ say "Select custom keybox XML."
 selected=$(pick_keybox)
 [ -n "$selected" ] || die "no file selected"
 validate_xml "$selected"
+trap 'case "$selected" in "$PREFIX_DIR"/tmp/yurikey-keybox.*) rm -f "$selected";; esac' EXIT
 
 clear_data=no
 if ask_yes_no "Clear Google Play Services, GSF, and Play Store data?" N; then clear_data=yes; fi

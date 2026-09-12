@@ -4,7 +4,7 @@ Termux + root helper for installing a selected Tricky Store `keybox.xml`.
 
 What it does:
 
-- Opens `termux-file-picker` when Termux:API is installed; otherwise asks for a path.
+- Opens Android file picker through `termux-storage-get` when Termux:API is installed; otherwise asks for a path.
 - Validates basic XML structure without printing private keys.
 - Backs up existing `keybox.xml` and `target.txt`.
 - Installs selected XML at `/data/adb/tricky_store/keybox.xml`.
@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/insta
 
 After install, `keybox` launches tool globally. `yurikey-easy` remains available too.
 
-For picker support, install the Termux:API companion app from the same source as Termux, then run:
+For picker support, install the Termux:API companion app from the same source/signing build as Termux, then run:
 
 ```sh
 pkg install termux-api
