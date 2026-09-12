@@ -25,7 +25,7 @@ keybox
 One-command remote install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/install.sh | sh -s -- --remote
 ```
 
 After install, `keybox` launches tool globally. `yurikey-easy` remains available too.
