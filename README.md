@@ -18,11 +18,17 @@ What it does:
 ```sh
 git clone https://github.com/shamrat05/yurikey-termux.git
 cd yurikey-termux
-mkdir -p "$PREFIX/bin"
-cp yurikey-easy "$PREFIX/bin/yurikey-easy"
-chmod 700 "$PREFIX/bin/yurikey-easy"
-yurikey-easy
+./install.sh
+keybox
 ```
+
+One-command remote install:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/install.sh | sh
+```
+
+After install, `keybox` launches tool globally. `yurikey-easy` remains available too.
 
 For picker support, install the Termux:API companion app from the same source as Termux, then run:
 
