@@ -122,10 +122,21 @@ root_apply() {
 
   if [ "$clear_data" = yes ]; then
     say "Clearing Google data. This can sign you out and reset Play Store state."
-    pm clear com.google.android.gms || die "failed clearing com.google.android.gms data"
-    pm clear com.google.android.gsf || die "failed clearing com.google.android.gsf data"
-    pm clear com.android.vending || die "failed clearing com.android.vending data"
-    say "Google data clear: done"
+    if pm clear com.google.android.gms >/dev/null 2>&1; then
+      say "Google Play Services data clear: done"
+    else
+      say "WARNING: Google Play Services data clear failed; continuing"
+    fi
+    if pm clear com.google.android.gsf >/dev/null 2>&1; then
+      say "Google Services Framework data clear: done"
+    else
+      say "WARNING: Google Services Framework data clear failed; continuing"
+    fi
+    if pm clear com.android.vending >/dev/null 2>&1; then
+      say "Play Store data clear: done"
+    else
+      say "WARNING: Play Store data clear failed; continuing"
+    fi
   fi
 
   if [ "$reboot_after" = yes ]; then
