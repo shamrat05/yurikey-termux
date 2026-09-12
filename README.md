@@ -30,6 +30,17 @@ curl -fsSL https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/insta
 
 After install, `keybox` launches tool globally. `yurikey-easy` remains available too.
 
+## Recommended answers
+
+Run `keybox`, select the XML, then answer:
+
+```text
+Clear Google data? Usually NO; can sign you out and remove payment data. [N]: n
+Reboot after install? Recommended YES for re-attestation. [N]: y
+```
+
+Tool always force-stops Google Play Services, GSF, and Play Store and clears their caches. Start with cache clear + reboot. Do not clear Google data unless Play Store certification or the required app still fails afterward. Google says Play Services data clear can remove saved passwords, transit cards, payment cards, and require account/payment reauthentication.
+
 For picker support, install the Termux:API companion app from the same source/signing build as Termux, then run:
 
 ```sh

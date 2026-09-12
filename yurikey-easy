@@ -188,9 +188,9 @@ done
 [ -n "$selected_targets" ] || die "no allowlisted packages detected in Termux; target.txt unchanged"
 
 clear_data=no
-if ask_yes_no "Clear Google Play Services, GSF, and Play Store data?" N; then clear_data=yes; fi
+if ask_yes_no "Clear Google data? Usually NO; can sign you out and remove payment data." N; then clear_data=yes; fi
 reboot_after=no
-if ask_yes_no "Reboot after install?" N; then reboot_after=yes; fi
+if ask_yes_no "Reboot after install? Recommended YES for re-attestation." N; then reboot_after=yes; fi
 
 encoded=$(printf '%s' "$selected" | base64 | tr -d '\n')
 encoded_targets=$(printf '%s' "$selected_targets" | base64 | tr -d '\n')
