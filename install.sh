@@ -4,7 +4,7 @@ set -eu
 prefix=${PREFIX:-/data/data/com.termux/files/usr}
 dest="$prefix/bin/yurikey-easy"
 alias="$prefix/bin/keybox"
-raw_url="https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/yurikey-easy?v=$(date +%s%N)"
+archive_url="https://github.com/shamrat05/yurikey-termux/archive/refs/heads/main.tar.gz?v=$(date +%s%N)"
 mkdir -p "$prefix/bin"
 local_script="$(dirname "$0")/yurikey-easy"
 if [ "${1:-}" = --local ] && [ -f "$local_script" ]; then
@@ -12,8 +12,10 @@ if [ "${1:-}" = --local ] && [ -f "$local_script" ]; then
 else
   command -v curl >/dev/null 2>&1 || { printf 'ERROR: curl not found\n' >&2; exit 1; }
   temp_file=$(mktemp)
-  trap 'rm -f "$temp_file"' EXIT
-  curl -fsSL "$raw_url" -o "$temp_file"
+  archive_file=$(mktemp)
+  trap 'rm -f "$temp_file" "$archive_file"' EXIT
+  curl -fsSL "$archive_url" -o "$archive_file"
+  tar -xOzf "$archive_file" yurikey-termux-main/yurikey-easy > "$temp_file"
   source_file="$temp_file"
 fi
 cp "$source_file" "$dest"
