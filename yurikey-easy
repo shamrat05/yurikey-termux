@@ -85,7 +85,9 @@ root_apply() {
   encoded_path=$1
   clear_data=$2
   reboot_after=$3
+  encoded_targets=$4
   src=$(printf '%s' "$encoded_path" | base64 -d) || die "invalid selected path"
+  targets=$(printf '%s' "$encoded_targets" | base64 -d) || die "invalid target list"
   [ -f "$src" ] || die "selected file not found: $src"
   mkdir -p /data/adb/tricky_store
   stamp=$(date +%Y%m%d-%H%M%S)
@@ -98,20 +100,11 @@ root_apply() {
   chmod 0644 "$KEYBOX_FILE"
 
   temp_target="$TARGET_FILE.tmp.$$"
-  : > "$temp_target"
-  count=0
-  installed_packages=$(/system/bin/cmd package list packages 2>/dev/null || /system/bin/pm list packages 2>/dev/null || true)
-  for package in $ALLOWLIST; do
-    if printf '%s\n' "$installed_packages" | grep -q "^package:$package$" || \
-       /system/bin/cmd package path "$package" >/dev/null 2>&1 || \
-       /system/bin/pm path "$package" >/dev/null 2>&1; then
-      printf '%s\n' "$package" >> "$temp_target"
-      count=$((count + 1))
-    fi
-  done
+  printf '%s\n' "$targets" | sed '/^[[:space:]]*$/d' > "$temp_target"
+  count=$(sed '/^[[:space:]]*$/d' "$temp_target" | wc -l)
   if [ "$count" -eq 0 ]; then
     rm -f "$temp_target"
-    die "no allowlisted packages detected by cmd/pm; target.txt unchanged"
+    die "empty filtered target list; target.txt unchanged"
   fi
   mv "$temp_target" "$TARGET_FILE"
   chown root:root "$TARGET_FILE"
@@ -171,10 +164,23 @@ selected=$(pick_keybox)
 validate_xml "$selected"
 trap 'case "$selected" in "$PREFIX_DIR"/tmp/yurikey-keybox.*) rm -f "$selected";; esac' EXIT
 
+# Android package-manager binder is reliable in normal Termux, but can fail inside
+# an interactive Magisk su TTY. Filter allowlist before entering root shell.
+installed_packages=$(pm list packages 2>/dev/null || true)
+selected_targets=""
+for package in $ALLOWLIST; do
+  if printf '%s\n' "$installed_packages" | grep -Fqx "package:$package"; then
+    selected_targets="${selected_targets}${package}
+"
+  fi
+done
+[ -n "$selected_targets" ] || die "no allowlisted packages detected in Termux; target.txt unchanged"
+
 clear_data=no
 if ask_yes_no "Clear Google Play Services, GSF, and Play Store data?" N; then clear_data=yes; fi
 reboot_after=no
 if ask_yes_no "Reboot after install?" N; then reboot_after=yes; fi
 
 encoded=$(printf '%s' "$selected" | base64 | tr -d '\n')
-run_root "$(printf '%s' "$PREFIX_DIR/bin/yurikey-easy") --root-apply '$encoded' '$clear_data' '$reboot_after'"
+encoded_targets=$(printf '%s' "$selected_targets" | base64 | tr -d '\n')
+run_root "$(printf '%s' "$PREFIX_DIR/bin/yurikey-easy") --root-apply '$encoded' '$clear_data' '$reboot_after' '$encoded_targets'"
