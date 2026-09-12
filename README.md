@@ -25,10 +25,10 @@ keybox
 One-command remote install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/install.sh | sh -s -- --remote
+curl -fsSL https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/install.sh | sh
 ```
 
-After install, `keybox` launches tool globally. `yurikey-easy` remains available too.
+After install, `keybox` launches tool globally. `yurikey-easy` remains available too. `install.sh` fetches latest remote `yurikey-easy` by default, even when run from an old cloned repository. Use `./install.sh --local` only for explicit offline/local install.
 
 ## Recommended answers
 

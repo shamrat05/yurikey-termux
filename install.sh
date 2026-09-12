@@ -7,7 +7,7 @@ alias="$prefix/bin/keybox"
 raw_url="https://raw.githubusercontent.com/shamrat05/yurikey-termux/main/yurikey-easy"
 mkdir -p "$prefix/bin"
 local_script="$(dirname "$0")/yurikey-easy"
-if [ "${1:-}" != --remote ] && [ -f "$local_script" ]; then
+if [ "${1:-}" = --local ] && [ -f "$local_script" ]; then
   source_file="$local_script"
 else
   command -v curl >/dev/null 2>&1 || { printf 'ERROR: curl not found\n' >&2; exit 1; }
