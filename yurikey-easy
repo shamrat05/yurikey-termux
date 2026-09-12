@@ -78,7 +78,7 @@ ask_yes_no() {
 
 run_root() {
   command=$1
-  su -c "$command"
+  su -c "$command" </dev/null
 }
 
 root_apply() {
@@ -122,17 +122,17 @@ root_apply() {
 
   if [ "$clear_data" = yes ]; then
     say "Clearing Google data. This can sign you out and reset Play Store state."
-    if pm clear com.google.android.gms >/dev/null 2>&1; then
+    if /system/bin/cmd package clear --user 0 com.google.android.gms >/dev/null 2>&1 || /system/bin/pm clear --user 0 com.google.android.gms >/dev/null 2>&1; then
       say "Google Play Services data clear: done"
     else
       say "WARNING: Google Play Services data clear failed; continuing"
     fi
-    if pm clear com.google.android.gsf >/dev/null 2>&1; then
+    if /system/bin/cmd package clear --user 0 com.google.android.gsf >/dev/null 2>&1 || /system/bin/pm clear --user 0 com.google.android.gsf >/dev/null 2>&1; then
       say "Google Services Framework data clear: done"
     else
       say "WARNING: Google Services Framework data clear failed; continuing"
     fi
-    if pm clear com.android.vending >/dev/null 2>&1; then
+    if /system/bin/cmd package clear --user 0 com.android.vending >/dev/null 2>&1 || /system/bin/pm clear --user 0 com.android.vending >/dev/null 2>&1; then
       say "Play Store data clear: done"
     else
       say "WARNING: Play Store data clear failed; continuing"
@@ -149,7 +149,7 @@ root_apply() {
 
 if [ "${1:-}" = --root-apply ]; then
   [ "$(id -u)" = 0 ] || die "root mode requires UID 0"
-  root_apply "$2" "$3" "$4"
+  root_apply "$2" "$3" "$4" "$5"
   exit 0
 fi
 
@@ -177,10 +177,10 @@ trap 'case "$selected" in "$PREFIX_DIR"/tmp/yurikey-keybox.*) rm -f "$selected";
 
 # Android package-manager binder is reliable in normal Termux, but can fail inside
 # an interactive Magisk su TTY. Filter allowlist before entering root shell.
-installed_packages=$(pm list packages 2>/dev/null || true)
+installed_packages=$(pm list packages 2>/dev/null | sed -E 's/^package://' | sed -E 's/.*=//' || true)
 selected_targets=""
 for package in $ALLOWLIST; do
-  if printf '%s\n' "$installed_packages" | sed 's/^package://' | grep -Fqx "$package"; then
+  if printf '%s\n' "$installed_packages" | grep -Fqx "$package"; then
     selected_targets="${selected_targets}${package}
 "
   fi
