@@ -180,7 +180,9 @@ trap 'case "$selected" in "$PREFIX_DIR"/tmp/yurikey-keybox.*) rm -f "$selected";
 installed_packages=$(pm list packages 2>/dev/null | sed -E 's/^package://' | sed -E 's/.*=//' || true)
 selected_targets=""
 for package in $ALLOWLIST; do
-  if printf '%s\n' "$installed_packages" | grep -Fqx "$package"; then
+  if printf '%s\n' "$installed_packages" | grep -Fqx "$package" || \
+     pm path "$package" >/dev/null 2>&1 || \
+     cmd package path "$package" >/dev/null 2>&1; then
     selected_targets="${selected_targets}${package}
 "
   fi
