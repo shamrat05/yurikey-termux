@@ -100,15 +100,18 @@ root_apply() {
   temp_target="$TARGET_FILE.tmp.$$"
   : > "$temp_target"
   count=0
+  installed_packages=$(/system/bin/cmd package list packages 2>/dev/null || /system/bin/pm list packages 2>/dev/null || true)
   for package in $ALLOWLIST; do
-    if /system/bin/cmd package path "$package" >/dev/null 2>&1 || /system/bin/pm path "$package" >/dev/null 2>&1; then
+    if printf '%s\n' "$installed_packages" | grep -q "^package:$package$" || \
+       /system/bin/cmd package path "$package" >/dev/null 2>&1 || \
+       /system/bin/pm path "$package" >/dev/null 2>&1; then
       printf '%s\n' "$package" >> "$temp_target"
       count=$((count + 1))
     fi
   done
   if [ "$count" -eq 0 ]; then
     rm -f "$temp_target"
-    die "no allowlisted packages detected; target.txt unchanged"
+    die "no allowlisted packages detected by cmd/pm; target.txt unchanged"
   fi
   mv "$temp_target" "$TARGET_FILE"
   chown root:root "$TARGET_FILE"
