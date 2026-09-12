@@ -1,0 +1,157 @@
+#!/data/data/com.termux/files/usr/bin/sh
+set -eu
+
+VERSION="1.0.0"
+PREFIX_DIR="${PREFIX:-/data/data/com.termux/files/usr}"
+TARGET_FILE="/data/adb/tricky_store/target.txt"
+KEYBOX_FILE="/data/adb/tricky_store/keybox.xml"
+
+# Keep this list small. Add packages only when they need Tricky Store attestation.
+ALLOWLIST="
+android
+com.google.android.gms
+com.google.android.gsf
+com.android.vending
+com.google.android.apps.walletnfcrel
+com.konasl.nagad
+com.bKash.customerapp
+com.uttarabank.ublmobile
+com.fasset.cashapp
+com.dbbl.nexus.pay
+com.dbbl.mbs.apps.main
+com.LankaBangla.Finance.Ltd.FinSmart
+com.bkashblind
+com.nexuspayblind
+com.binance.dev
+com.openai.chatgpt
+com.whatsapp
+com.whatsapp.w4b
+"
+
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+say() { printf '%s\n' "$*"; }
+
+pick_keybox() {
+  if command -v termux-file-picker >/dev/null 2>&1; then
+    termux-file-picker --type 'text/xml' 2>/dev/null || true
+  else
+    say "termux-file-picker unavailable. Install Termux:API app + package: pkg install termux-api" >&2
+    printf 'Keybox XML path: '
+    read -r path
+    printf '%s\n' "$path"
+  fi
+}
+
+validate_xml() {
+  file=$1
+  [ -f "$file" ] || die "file not found: $file"
+  [ -r "$file" ] || die "file not readable: $file"
+  grep -q '<AndroidAttestation' "$file" || die "missing <AndroidAttestation> root"
+  grep -q '<Keybox' "$file" || die "missing <Keybox>"
+  grep -q '<PrivateKey' "$file" || die "missing <PrivateKey>"
+  grep -q '<CertificateChain' "$file" || die "missing <CertificateChain>"
+}
+
+ask_yes_no() {
+  question=$1
+  default=${2:-N}
+  printf '%s [%s]: ' "$question" "$default"
+  read -r answer || answer=
+  answer=$(printf '%s' "$answer" | tr '[:upper:]' '[:lower:]')
+  [ -n "$answer" ] || answer=$(printf '%s' "$default" | tr '[:upper:]' '[:lower:]')
+  [ "$answer" = y ] || [ "$answer" = yes ]
+}
+
+run_root() {
+  command=$1
+  su -c "$command"
+}
+
+root_apply() {
+  encoded_path=$1
+  clear_data=$2
+  reboot_after=$3
+  src=$(printf '%s' "$encoded_path" | base64 -d) || die "invalid selected path"
+  [ -f "$src" ] || die "selected file not found: $src"
+  mkdir -p /data/adb/tricky_store
+  stamp=$(date +%Y%m%d-%H%M%S)
+
+  if [ -f "$TARGET_FILE" ]; then cp -p "$TARGET_FILE" "$TARGET_FILE.bak.$stamp"; fi
+  if [ -f "$KEYBOX_FILE" ]; then cp -p "$KEYBOX_FILE" "$KEYBOX_FILE.bak.$stamp"; fi
+
+  cp "$src" "$KEYBOX_FILE"
+  chown root:root "$KEYBOX_FILE"
+  chmod 0644 "$KEYBOX_FILE"
+
+  : > "$TARGET_FILE"
+  count=0
+  for package in $ALLOWLIST; do
+    if pm path "$package" >/dev/null 2>&1; then
+      printf '%s\n' "$package" >> "$TARGET_FILE"
+      count=$((count + 1))
+    fi
+  done
+  chown root:root "$TARGET_FILE"
+  chmod 0644 "$TARGET_FILE"
+  [ "$count" -gt 0 ] || die "no allowlisted packages installed; target.txt left empty"
+
+  for package in com.google.android.gms com.google.android.gsf com.android.vending; do
+    am force-stop "$package" >/dev/null 2>&1 || true
+    cmd package trim-caches 0 "$package" >/dev/null 2>&1 || true
+  done
+
+  say "Installed keybox: $KEYBOX_FILE"
+  say "Target packages written: $count"
+  say "Google force-stop/cache-clear: done"
+  say "Backups: $TARGET_FILE.bak.$stamp and $KEYBOX_FILE.bak.$stamp (when originals existed)"
+
+  if [ "$clear_data" = yes ]; then
+    say "Clearing Google data. This can sign you out and reset Play Store state."
+    pm clear com.google.android.gms || die "failed clearing com.google.android.gms data"
+    pm clear com.google.android.gsf || die "failed clearing com.google.android.gsf data"
+    pm clear com.android.vending || die "failed clearing com.android.vending data"
+    say "Google data clear: done"
+  fi
+
+  if [ "$reboot_after" = yes ]; then
+    say "Rebooting..."
+    reboot
+  else
+    say "Reboot: skipped"
+  fi
+}
+
+if [ "${1:-}" = --root-apply ]; then
+  [ "$(id -u)" = 0 ] || die "root mode requires UID 0"
+  root_apply "$2" "$3" "$4"
+  exit 0
+fi
+
+case "${1:-apply}" in
+  -h|--help)
+    say "Yurikey Easy $VERSION"
+    say "Usage: yurikey-easy [apply]"
+    say "Select XML, install custom keybox, write installed-only allowlist, clear caches."
+    say "Prompts before Google data clear and reboot."
+    exit 0
+    ;;
+  apply)
+    ;;
+  *) die "unknown command: $1" ;;
+esac
+
+[ "$(id -u)" != 0 ] || die "run from Termux, not inside su"
+command -v su >/dev/null 2>&1 || die "su not found"
+
+say "Select custom keybox XML."
+selected=$(pick_keybox)
+[ -n "$selected" ] || die "no file selected"
+validate_xml "$selected"
+
+clear_data=no
+if ask_yes_no "Clear Google Play Services, GSF, and Play Store data?" N; then clear_data=yes; fi
+reboot_after=no
+if ask_yes_no "Reboot after install?" N; then reboot_after=yes; fi
+
+encoded=$(printf '%s' "$selected" | base64 | tr -d '\n')
+run_root "$(printf '%s' "$PREFIX_DIR/bin/yurikey-easy") --root-apply '$encoded' '$clear_data' '$reboot_after'"
